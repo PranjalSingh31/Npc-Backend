@@ -1,22 +1,56 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const connectDB = require('./config/db');
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const connectDB = require("./config/db");
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json({ limit: '10mb' }));
+
+// ------------------------------
+// ✅ FIXED CORS (THIS IS THE MAIN ISSUE)
+// ------------------------------
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://npcglobal.in",
+  "https://www.npcglobal.in",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow mobile apps / curl / postman
+      if (!origin) return callback(null, true);
+
+      if (!allowedOrigins.includes(origin)) {
+        console.log("❌ CORS BLOCKED:", origin);
+        return callback(new Error("Not allowed by CORS"), false);
+      }
+
+      return callback(null, true);
+    },
+    methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    allowedHeaders: "Content-Type, Authorization",
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
+  })
+);
+
+// Allow OPTIONS for all routes
+app.options("*", cors());
+
+// Parse JSON BEFORE routes (important)
+app.use(express.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// connect DB
+// Connect DB
 connectDB();
 
 // ------------------------------
-// 🔥 CREATE ADMIN ON STARTUP
+// 🔥 AUTO CREATE ADMIN
 // ------------------------------
-const User = require('./models/User');
-const bcrypt = require('bcryptjs');
+const User = require("./models/User");
+const bcrypt = require("bcryptjs");
 
 async function createAdminUser() {
   try {
@@ -32,7 +66,7 @@ async function createAdminUser() {
         name: "Admin",
         email,
         password: hashed,
-        role: "admin",       // ✅ CORRECT FIELD
+        role: "admin",
       });
 
       console.log("✔ Admin created:", admin.email);
@@ -49,14 +83,18 @@ createAdminUser();
 // ------------------------------
 // ROUTES
 // ------------------------------
-app.use('/auth', require('./routes/auth'));
-app.use('/forms', require('./routes/forms'));
-app.use('/contact', require('./routes/contact'));
-app.use('/admin', require('./routes/admin'));
-app.use('/payments', require('./routes/payments'));
+app.use("/auth", require("./routes/auth"));
+app.use("/forms", require("./routes/forms"));
+app.use("/contact", require("./routes/contact"));
+app.use("/admin", require("./routes/admin"));
+app.use("/payments", require("./routes/payments"));
 
-app.get('/', (req, res) => res.json({ ok: true, message: 'NPC Backend running' }));
+app.get("/", (req, res) =>
+  res.json({ ok: true, message: "NPC Backend running" })
+);
 
 // ------------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🔥 Server started and running on port ${PORT}`)
+);
