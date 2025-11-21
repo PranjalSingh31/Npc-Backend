@@ -1,13 +1,17 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { verifyGoogleIdToken } = require('../config/passport');
+const { OAuth2Client } = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Create JWT Token
-const signToken = (userId) =>
-  jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+const signToken = (userId, isAdmin) =>
+  jwt.sign(
+    { id: userId, isAdmin },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
 
 // ------------------------------------------
 // REGISTER
@@ -31,7 +35,7 @@ exports.register = async (req, res) => {
       role: "user"
     });
 
-    const token = signToken(user._id);
+    const token = signToken(user._id, false);
 
     return res.json({
       token,
@@ -39,11 +43,11 @@ exports.register = async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        isAdmin: user.role === "admin"
+        isAdmin: false
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("REGISTER ERROR:", err);
     return res.status(500).json({ error: 'Server error' });
   }
 };
@@ -66,7 +70,7 @@ exports.login = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.role === "admin");
 
     return res.json({
       token,
@@ -78,26 +82,33 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("LOGIN ERROR:", err);
     return res.status(500).json({ error: 'Server error' });
   }
 };
 
 // ------------------------------------------
-// GOOGLE LOGIN
+// GOOGLE LOGIN  (FOR GOOGLE IDENTITY SERVICES)
 // ------------------------------------------
 exports.googleLogin = async (req, res) => {
   try {
-    const { idToken } = req.body;
-    if (!idToken) return res.status(400).json({ error: "idToken required" });
+    const { credential } = req.body;   // <-- THIS is what GIS sends
 
-    const payload = await verifyGoogleIdToken(idToken);
+    if (!credential)
+      return res.status(400).json({ error: "Missing credential" });
+
+    // Verify Google token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
     let user = await User.findOne({ email });
 
     if (!user) {
-      // create new Google user
       user = await User.create({
         name,
         email,
@@ -106,13 +117,12 @@ exports.googleLogin = async (req, res) => {
         role: "user"
       });
     } else {
-      // update Google fields
       if (!user.googleId) user.googleId = googleId;
       if (!user.avatar) user.avatar = picture;
       await user.save();
     }
 
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.role === "admin");
 
     return res.json({
       token,
@@ -124,9 +134,8 @@ exports.googleLogin = async (req, res) => {
         isAdmin: user.role === "admin"
       }
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("GOOGLE LOGIN ERROR:", err);
     return res.status(400).json({ error: "Google login failed" });
   }
 };
