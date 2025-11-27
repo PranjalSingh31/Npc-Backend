@@ -1,28 +1,24 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const cloudinary = require("../config/cloudinary");
 const { protect } = require("../middleware/auth");
 
-// memory storage for quick upload
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-router.post("/image", protect, upload.single("file"), async (req, res) => {
+// Upload Base64 or File Blob
+router.post("/image", protect, async (req, res) => {
   try {
-    const result = await cloudinary.uploader.upload_stream(
-      { resource_type: "image" },
-      (error, uploadResult) => {
-        if (uploadResult) {
-          res.json({ ok: true, url: uploadResult.secure_url });
-        } else {
-          res.status(500).json({ ok: false, error: "Upload failed" });
-        }
-      }
-    ).end(req.file.buffer);
+    const { image } = req.body;
+
+    if (!image) return res.status(400).json({ error: "Image required" });
+
+    const upload = await cloudinary.uploader.upload(image, {
+      folder: "npc_uploads",
+    });
+
+    res.json({ ok: true, url: upload.secure_url });
 
   } catch (err) {
-    res.status(500).json({ ok: false, error: "Cloudinary upload error" });
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
