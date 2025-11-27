@@ -5,13 +5,13 @@ const ListingSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["blog", "franchise", "business", "investor"], // 🔥 all types supported
+      enum: ["blog", "franchise", "business", "investor"], 
     },
 
-    // Common Fields
-    title: String,         // blog only
-    content: String,       // blog only
-    image: String,         // optional for all
+    // BLOG SUPPORT (MULTIPLE IMAGES)
+    title: String,
+    content: String,
+    images: [String],    // <-- UPDATED (stores multiple blog images)
 
     // Franchise & Business
     name: String,
@@ -32,9 +32,9 @@ const ListingSchema = new mongoose.Schema(
     stage: String,
     portfolio: String,
 
-    // Author Info
+    // Author Info ↓
     authorName: String,
-    authorEmail: String,
+    authorEmail: String
   },
   { timestamps: true }
 );
