@@ -77,6 +77,8 @@ app.use("/admin", require("./routes/admin"));
 app.use("/payments", require("./routes/payments"));
 app.use("/listings", require("./routes/listings")); // <── BLOG/FRANCHISE/BUSINESS/INVESTOR
 app.use("/upload", require("./routes/upload"));
+app.use("/blog", require("./routes/blog"));
+
 
 // ──────────────────────────────────────────
 app.get("/", (req, res) => {
