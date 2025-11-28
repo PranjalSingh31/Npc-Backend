@@ -3,29 +3,36 @@ const router = express.Router();
 const Listing = require("../models/Listing");
 const { protect } = require("../middleware/auth");
 
-// 📌 GET all blogs
+/* ======================================
+   📌 GET ALL BLOGS
+====================================== */
 router.get("/", async (req, res) => {
   try {
     const blogs = await Listing.find({ type: "blog" }).sort({ createdAt: -1 });
-    res.json({ ok: true, data: blogs });
-  } catch {
-    res.status(500).json({ error: "Blog fetch failed" });
+    res.json({ ok: true, blogs });           // <--- Consistent response
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Failed to fetch blogs" });
   }
 });
 
-// 📌 GET single blog by ID  ❗ THIS WAS MISSING
+/* ======================================
+   📌 GET SINGLE BLOG — REQUIRED BY UI
+====================================== */
 router.get("/:id", async (req, res) => {
   try {
     const blog = await Listing.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: "Blog not found" });
 
-    res.json({ ok: true, blog }); // frontend expects `res.data.blog`
-  } catch {
+    res.json({ ok: true, blog });            // <--- frontend reads res.data.blog
+  } catch (err) {
     res.status(500).json({ error: "Could not load blog" });
   }
 });
 
-// 📌 CREATE blog
+/* ======================================
+   📌 CREATE BLOG  (USER + ADMIN)
+====================================== */
 router.post("/", protect, async (req, res) => {
   try {
     const blog = await Listing.create({
@@ -36,25 +43,31 @@ router.post("/", protect, async (req, res) => {
     });
 
     res.json({ ok: true, blog });
-  } catch(err) {
+  } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Blog creation failed" });
   }
 });
 
-// 📌 DELETE (Admin OR Owner)
+/* ======================================
+   📌 DELETE BLOG  (Admin OR Owner Only)
+====================================== */
 router.delete("/:id", protect, async (req, res) => {
   try {
     const blog = await Listing.findById(req.params.id);
-    if (!blog) return res.status(404).json({ error: "Not found" });
+    if (!blog) return res.status(404).json({ error: "Blog not found" });
 
-    if (req.user.role !== "admin" && req.user.email !== blog.authorEmail)
-      return res.status(403).json({ error: "Not allowed" });
+    // 🔥 Final secured condition:
+    // Admin can delete any
+    // User can delete only their own blog
+    if (req.user.role !== "admin" && req.user.email !== blog.authorEmail) {
+      return res.status(403).json({ error: "Not allowed to delete this blog" });
+    }
 
     await blog.deleteOne();
-    res.json({ ok: true, message: "Deleted" });
+    res.json({ ok: true, message: "Blog deleted successfully" });
 
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Deletion failed" });
   }
 });
