@@ -4,20 +4,21 @@ const FormSubmission = require("../models/FormSubmission");
 const { protect } = require("../middleware/auth");
 
 /* --------------------------------------------
-   USER — SUBMIT FORM (multiple allowed per type)
+   USER — SUBMIT FORM (any formType accepted)
 -------------------------------------------- */
+
 router.post("/:formType", protect, async (req, res) => {
   try {
-    const saved = await FormSubmission.create({
+    const submission = await FormSubmission.create({
+      user: req.user._id,
       formType: req.params.formType,
       name: req.body.name,
       email: req.body.email,
       phone: req.body.phone,
-      payload: req.body,       // full form data
-      user: req.user._id,
+      payload: req.body,
     });
 
-    res.json({ ok: true, submission: saved });
+    res.json({ ok: true, submission });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Form submission failed" });
@@ -25,8 +26,9 @@ router.post("/:formType", protect, async (req, res) => {
 });
 
 /* --------------------------------------------
-   GET — ALL FORMS (ADMIN ONLY)
+   GET — ALL FORMS (Admin only)
 -------------------------------------------- */
+
 router.get("/", protect, async (req, res) => {
   try {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Not admin" });
@@ -39,19 +41,20 @@ router.get("/", protect, async (req, res) => {
 });
 
 /* --------------------------------------------
-   GET — FILTER BY FORM TYPE (Admin + User)
+   GET — SPECIFIC FORM TYPE
 -------------------------------------------- */
 router.get("/type/:formType", protect, async (req, res) => {
   try {
-    const result = await FormSubmission.find({ formType: req.params.formType }).sort({ createdAt: -1 });
-    res.json({ ok: true, forms: result });
+    const data = await FormSubmission.find({ formType: req.params.formType }).sort({ createdAt: -1 });
+    res.json({ ok: true, forms: data });
   } catch (err) {
     res.status(500).json({ error: "Unable to load submissions" });
   }
 });
 
+
 /* --------------------------------------------
-   DELETE A FORM (ADMIN ONLY)
+   DELETE A FORM (Admin only)
 -------------------------------------------- */
 router.delete("/:id", protect, async (req, res) => {
   try {
