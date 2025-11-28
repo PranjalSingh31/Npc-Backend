@@ -17,19 +17,21 @@ const allowedOrigins = [
   "https://npc-frontend.vercel.app"
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (!allowedOrigins.includes(origin))
-      return callback(new Error("CORS blocked"), false);
-    return callback(null, true);
-  },
-  methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-  allowedHeaders: "Content-Type, Authorization",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (!allowedOrigins.includes(origin))
+        return callback(new Error("CORS blocked"), false);
+      return callback(null, true);
+    },
+    methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    allowedHeaders: "Content-Type, Authorization",
+    credentials: true,
+  })
+);
 
-app.options("*", cors()); 
+app.options("*", cors());
 
 // ──────────────────────────────────────────
 // JSON & Body Parser
@@ -56,7 +58,7 @@ async function createAdminUser() {
       name: "Admin",
       email: adminEmail,
       password: await bcrypt.hash(password, 10),
-      role: "admin"
+      role: "admin",
     });
     console.log(`✔ Admin Created → ${adminEmail}`);
   } else {
@@ -66,20 +68,22 @@ async function createAdminUser() {
 createAdminUser();
 
 // ──────────────────────────────────────────
-// ROUTES
+// ROUTES (FULLY FIXED)
 // ──────────────────────────────────────────
 app.use("/auth", require("./routes/auth"));
-app.use("/auth/google", require("./routes/googleAuth"));  // SINGLE Google Auth Route
-
+app.use("/auth/google", require("./routes/googleAuth"));
 app.use("/forms", require("./routes/forms"));
 app.use("/contact", require("./routes/contact"));
 app.use("/admin", require("./routes/admin"));
 app.use("/payments", require("./routes/payments"));
-app.use("/listings", require("./routes/listings")); // <── BLOG/FRANCHISE/BUSINESS/INVESTOR
+app.use("/listings", require("./routes/listings"));
 app.use("/upload", require("./routes/upload"));
-app.use("/blog", require("./routes/blog"));
 
+// ⭐ FINAL FIX — Blog System Route Corrected
+app.use("/api/blog", require("./routes/blog"));   // <── WORKS WITH FRONTEND NOW
 
+// ──────────────────────────────────────────
+// CHECK SERVER STATUS
 // ──────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({ ok: true, message: "NPC Backend Running 🔥" });
