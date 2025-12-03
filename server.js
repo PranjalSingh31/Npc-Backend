@@ -4,6 +4,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const connectDB = require("./config/db");
 const bcrypt = require("bcryptjs");
+const path = require("path"); // <-- added
 
 const app = express();
 
@@ -21,8 +22,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (!allowedOrigins.includes(origin))
-        return callback(new Error("CORS blocked"), false);
+      if (!allowedOrigins.includes(origin)) return callback(new Error("CORS blocked"), false);
       return callback(null, true);
     },
     methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -66,6 +66,18 @@ async function createAdminUser() {
   }
 }
 createAdminUser();
+
+// ──────────────────────────────────────────
+// STATIC FILE SERVING (uploads + public)
+// ──────────────────────────────────────────
+// Serve uploaded images: http://localhost:5000/uploads/<filename>
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Serve public static assets (no-image.png etc)
+// Files in <project-root>/frontend/public or backend/public should be copied to backend/public
+// OR ensure frontend is serving its own public files in production.
+// This line serves backend/public if you place shared fallbacks there.
+app.use(express.static(path.join(__dirname, "public")));
 
 // ──────────────────────────────────────────
 // ROUTES (FULLY FIXED)

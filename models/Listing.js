@@ -2,37 +2,120 @@ const mongoose = require("mongoose");
 
 const ListingSchema = new mongoose.Schema(
   {
+    // TYPE — identifies what this record is
     type: {
       type: String,
       required: true,
       enum: ["blog", "franchise", "business", "investor"],
     },
 
-    // Blog fields
-    title: String,
-    content: String,
-    images: [String],   // <-- 🔥 multiple images here
+    /* ----------------------------------------------------------
+       BLOG FIELDS
+    ---------------------------------------------------------- */
+    title: {
+      type: String,
+      default: "",
+    },
 
-    // Franchise / Business fields
-    name: String,
-    description: String,
-    location: String,
-    investment: String,
-    industry: String,
-    roi: String,
+    content: {
+      type: String,
+      default: "",
+    },
 
-    askingPrice: String,
-    employees: String,
-    revenue: String,
+    // Your DB sometimes stores "image", sometimes "images[]"
+    // This keeps BOTH and prevents frontend breakage
+    image: {
+      type: String,
+      default: "",
+    },
 
-    investmentRange: String,
-    industries: String,
-    stage: String,
-    portfolio: String,
+    images: {
+      type: [String],
+      default: [],
+    },
 
-    authorName: String,
-    authorEmail: String,
+    /* ----------------------------------------------------------
+       FRANCHISE / BUSINESS / INVESTOR FIELDS
+    ---------------------------------------------------------- */
+    name: {
+      type: String,
+      default: "",
+    },
+
+    description: {
+      type: String,
+      default: "",
+    },
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    investment: {
+      type: String,
+      default: "",
+    },
+
+    industry: {
+      type: String,
+      default: "",
+    },
+
+    roi: {
+      type: String,
+      default: "",
+    },
+
+    askingPrice: {
+      type: String,
+      default: "",
+    },
+
+    employees: {
+      type: String,
+      default: "",
+    },
+
+    revenue: {
+      type: String,
+      default: "",
+    },
+
+    investmentRange: {
+      type: String,
+      default: "",
+    },
+
+    industries: {
+      type: String,
+      default: "",
+    },
+
+    stage: {
+      type: String,
+      default: "",
+    },
+
+    portfolio: {
+      type: String,
+      default: "",
+    },
+
+    /* ----------------------------------------------------------
+       AUTHOR INFO (BLOG OWNER OR ADMIN)
+    ---------------------------------------------------------- */
+    authorName: {
+      type: String,
+      default: "",
+    },
+
+    authorEmail: {
+      type: String,
+      default: "",
+    },
   },
+
   { timestamps: true }
 );
 
