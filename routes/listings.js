@@ -1,147 +1,78 @@
 // backend/routes/listings.js
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const Listing = require("../models/Listing");
 const { protect } = require("../middleware/auth");
 
-const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-const FALLBACK = "/no-image.png";
+// Helper: allowed types
+const ALLOWED = ["franchise", "business", "investor", "blog"];
 
-const safeImage = (img) => {
-  if (!img || typeof img !== "string") return FALLBACK;
-  const s = img.trim();
-  if (!s) return FALLBACK;
-  // block broken domain
-  if (s.includes("empowerfitness.in")) return FALLBACK;
-  // full url (cloudinary etc)
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-  // root-relative paths (e.g. /uploads/...)
-  if (s.startsWith("/")) return s;
-  // upload-like path "uploads/abc.jpg" -> make root-relative
-  if (s.includes("/")) return `/${s.replace(/^\/+/, "")}`;
-  return FALLBACK;
-};
-
-const formatListing = (item) => {
-  const imagesArr =
-    Array.isArray(item.images) && item.images.length > 0
-      ? item.images.map((x) => safeImage(x))
-      : item.image
-      ? [safeImage(item.image)]
-      : [FALLBACK];
-
-  return {
-    ...item._doc,
-    image: safeImage(item.image),
-    images: imagesArr,
-  };
-};
-
-/* GET /listings/:type  — list items of a type (public) */
+/* GET /listings/:type  — list by type */
 router.get("/:type", async (req, res) => {
   try {
     const { type } = req.params;
-    if (!["franchise", "business", "investor"].includes(type)) {
-      return res.status(400).json({ ok: false, error: "Invalid listing type" });
-    }
+    if (!ALLOWED.includes(type)) return res.status(400).json({ ok: false, error: "Invalid type" });
 
     const items = await Listing.find({ type }).sort({ createdAt: -1 });
-
-    res.json({
-      ok: true,
-      data: items.map(formatListing),
-    });
+    return res.json({ ok: true, data: items });
   } catch (err) {
     console.error("GET /listings/:type error:", err);
-    res.status(500).json({ ok: false, error: "Failed to fetch listings" });
+    return res.status(500).json({ ok: false, error: "Failed to fetch listings" });
   }
 });
 
-/* GET /listings/:type/:id  — single item (public) */
+/* GET /listings/:type/:id  — single item */
 router.get("/:type/:id", async (req, res) => {
   try {
     const { type, id } = req.params;
-    if (!["franchise", "business", "investor"].includes(type)) {
-      return res.status(400).json({ ok: false, error: "Invalid listing type" });
-    }
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({ ok: false, error: "Invalid id" });
-    }
+    if (!ALLOWED.includes(type)) return res.status(400).json({ ok: false, error: "Invalid type" });
 
     const item = await Listing.findById(id);
     if (!item) return res.status(404).json({ ok: false, error: "Not found" });
+    if (item.type !== type) return res.status(400).json({ ok: false, error: "Type mismatch" });
 
-    // ensure the found item's type matches requested type (defense)
-    if (item.type !== type) {
-      return res.status(400).json({ ok: false, error: "Type mismatch" });
-    }
-
-    res.json({ ok: true, data: formatListing(item) });
+    return res.json({ ok: true, data: item });
   } catch (err) {
-    console.error(`GET /listings/${req.params.type}/${req.params.id} error:`, err);
-    res.status(500).json({ ok: false, error: "Failed to fetch listing" });
+    console.error("GET /listings/:type/:id error:", err);
+    return res.status(500).json({ ok: false, error: "Failed to fetch listing" });
   }
 });
 
-/* POST /listings/:type  — create (admin) */
+/* POST /listings/:type — create (protected) */
 router.post("/:type", protect, async (req, res) => {
   try {
-    if (req.user.role !== "admin") return res.status(403).json({ ok: false, error: "Admin only" });
-
     const { type } = req.params;
-    if (!["franchise", "business", "investor"].includes(type)) {
-      return res.status(400).json({ ok: false, error: "Invalid listing type" });
-    }
+    if (!ALLOWED.includes(type)) return res.status(400).json({ ok: false, error: "Invalid type" });
 
-    const listing = await Listing.create({
-      ...req.body,
-      type,
-      authorName: req.user.name,
-      authorEmail: req.user.email,
-    });
+    const payload = { ...req.body, type, authorEmail: req.user.email || "" };
+    const listing = await Listing.create(payload);
 
-    res.json({ ok: true, listing: formatListing(listing) });
+    return res.json({ ok: true, listing });
   } catch (err) {
     console.error("POST /listings/:type error:", err);
-    res.status(500).json({ ok: false, error: "Creation failed" });
+    return res.status(500).json({ ok: false, error: "Creation failed" });
   }
 });
 
-/* PUT /listings/:id  — update (admin) */
-router.put("/:id", protect, async (req, res) => {
+/* DELETE /listings/:type/:id — delete (protected: admin or owner) */
+router.delete("/:type/:id", protect, async (req, res) => {
   try {
-    if (req.user.role !== "admin") return res.status(403).json({ ok: false, error: "Admin only" });
-
-    const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
-
-    const updated = await Listing.findByIdAndUpdate(id, req.body, { new: true });
-    if (!updated) return res.status(404).json({ ok: false, error: "Not found" });
-
-    res.json({ ok: true, listing: formatListing(updated) });
-  } catch (err) {
-    console.error("PUT /listings/:id error:", err);
-    res.status(500).json({ ok: false, error: "Update failed" });
-  }
-});
-
-/* DELETE /listings/:id  — delete (admin) */
-router.delete("/:id", protect, async (req, res) => {
-  try {
-    if (req.user.role !== "admin") return res.status(403).json({ ok: false, error: "Admin only" });
-
-    const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const { type, id } = req.params;
+    if (!ALLOWED.includes(type)) return res.status(400).json({ ok: false, error: "Invalid type" });
 
     const item = await Listing.findById(id);
     if (!item) return res.status(404).json({ ok: false, error: "Not found" });
+    if (item.type !== type) return res.status(400).json({ ok: false, error: "Type mismatch" });
+
+    if (req.user.role !== "admin" && req.user.email !== item.authorEmail) {
+      return res.status(403).json({ ok: false, error: "Not allowed" });
+    }
 
     await item.deleteOne();
-    res.json({ ok: true, message: "Listing deleted" });
+    return res.json({ ok: true });
   } catch (err) {
-    console.error("DELETE /listings/:id error:", err);
-    res.status(500).json({ ok: false, error: "Delete failed" });
+    console.error("DELETE /listings/:type/:id error:", err);
+    return res.status(500).json({ ok: false, error: "Delete failed" });
   }
 });
 

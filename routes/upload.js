@@ -1,34 +1,56 @@
 // backend/routes/upload.js
 const express = require("express");
 const router = express.Router();
-const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
-const { protect } = require("../middleware/auth");
+const path = require("path");
+const fs = require("fs");
 
-/**
- * POST /upload/image
- * Accepts single file (form-data name: "file")
- * Returns: { ok: true, url, public_id }
- */
-router.post("/image", protect, upload.single("file"), async (req, res) => {
+// TEMP upload folder
+const upload = multer({ dest: "uploads/" });
+
+// Ensure uploads directory exists
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
+
+/*
+--------------------------------------------------
+ POST /upload/image
+ Handles image upload and returns direct URL
+--------------------------------------------------
+*/
+router.post("/image", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "No file received" });
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
 
-    const file = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    const tempPath = req.file.path;
+    const ext = path.extname(req.file.originalname);
+    const finalName = req.file.filename + ext;
+    const finalPath = path.join("uploads", finalName);
 
-    const uploaded = await cloudinary.uploader.upload(file, {
-      folder: "npc_uploads",
-      use_filename: true,
-      unique_filename: false,
-      overwrite: false,
+    // Rename temp file → final file
+    fs.renameSync(tempPath, finalPath);
+
+    // Production (Render) or Localhost base URL
+    const base =
+      process.env.BASE_URL ||
+      (process.env.RENDER_EXTERNAL_URL
+        ? process.env.RENDER_EXTERNAL_URL
+        : "http://localhost:5000");
+
+    const fileUrl = `${base}/uploads/${finalName}`;
+
+    return res.json({
+      ok: true,
+      url: fileUrl,
     });
-
-    // uploaded.secure_url is a full https URL — frontend can use it directly
-    return res.json({ ok: true, url: uploaded.secure_url, public_id: uploaded.public_id });
   } catch (err) {
-    console.error("UPLOAD ERROR →", err);
-    return res.status(500).json({ ok: false, error: "Upload failed" });
+    console.error("UPLOAD ERROR:", err);
+    return res
+      .status(500)
+      .json({ ok: false, error: "Image upload failed" });
   }
 });
 

@@ -90,6 +90,10 @@ app.use("/admin", require("./routes/admin"));
 app.use("/payments", require("./routes/payments"));
 app.use("/listings", require("./routes/listings"));
 app.use("/upload", require("./routes/upload"));
+app.use("/forms", require("./routes/forms"));
+app.use("/forms", require("./routes/formss"));
+app.use("/uploads", express.static("uploads"));
+
 
 // ⭐ FINAL FIX — Blog System Route Corrected
 app.use("/api/blog", require("./routes/blog"));   // <── WORKS WITH FRONTEND NOW
