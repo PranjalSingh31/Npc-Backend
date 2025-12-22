@@ -4,15 +4,18 @@ const FormSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
 
-    formType: { type: String, required: true },  // blog, franchise, business, investor, incorporation etc.
+    formType: { type: String, required: true },  
 
     name: String,
     email: String,
     phone: String,
 
-    payload: { type: Object, required: true }, // stores entire submitted form object
+    payload: { type: Object, required: true }, 
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("FormSubmission", FormSchema);
+// 🔥 FIX — prevent OverwriteModelError
+module.exports =
+  mongoose.models.FormSubmission ||
+  mongoose.model("FormSubmission", FormSchema);

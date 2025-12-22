@@ -2,31 +2,28 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const path = require("path");
 const connectDB = require("./config/db");
 const bcrypt = require("bcryptjs");
+const path = require("path");
 
 const app = express();
 
 /* ======================================================
-🚀 CORS CONFIG (Production + Local Allowed)
+   CORS
 ====================================================== */
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://localhost:5173",
   "https://npcglobal.in",
   "https://www.npcglobal.in",
-  "https://npc-frontend.vercel.app",
+  "https://npc-frontend.vercel.app"
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (!allowedOrigins.includes(origin)) {
-        return callback(new Error("CORS Blocked"), false);
-      }
-      return callback(null, true);
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (!allowedOrigins.includes(origin)) return cb(new Error("CORS blocked"), false);
+      return cb(null, true);
     },
     methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     allowedHeaders: "Content-Type, Authorization",
@@ -37,22 +34,21 @@ app.use(
 app.options("*", cors());
 
 /* ======================================================
-📌 BODY PARSER + JSON
+   JSON PARSER
 ====================================================== */
 app.use(express.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 /* ======================================================
-📌 CONNECT DATABASE
+   DB CONNECT
 ====================================================== */
 connectDB();
 
 /* ======================================================
-🔥 AUTO CREATE ADMIN (One Time)
+   AUTO CREATE ADMIN
 ====================================================== */
 const User = require("./models/User");
-
-async function createAdminUser() {
+async function createAdmin() {
   const adminEmail = "Nitish@npcglobal.com";
   const password = "NPC@2025##";
 
@@ -70,43 +66,54 @@ async function createAdminUser() {
     console.log("✔ Admin Exists:", adminEmail);
   }
 }
-createAdminUser();
+createAdmin();
 
 /* ======================================================
-📁 STATIC FILES
+   STATIC FILES
 ====================================================== */
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(express.static(path.join(__dirname, "public"))); // fallback assets
+app.use(express.static(path.join(__dirname, "public")));
 
 /* ======================================================
-📌 ROUTES (FINAL, CLEAN, NON‑DUPLICATE)
+   ROUTES (FINAL ORDER)
 ====================================================== */
+
+// AUTH
 app.use("/auth", require("./routes/auth"));
 app.use("/auth/google", require("./routes/googleAuth"));
 
+// MAIN APP ROUTES
 app.use("/api/blog", require("./routes/blog"));
-
 app.use("/contact", require("./routes/contact"));
 app.use("/admin", require("./routes/admin"));
 app.use("/payments", require("./routes/payments"));
+
 app.use("/listings", require("./routes/listings"));
 app.use("/upload", require("./routes/upload"));
 
-// Service Forms (main)
+/* ======================================================
+   SERVICE FORMS (Unified System)
+====================================================== */
 app.use("/forms", require("./routes/forms"));
 
-// Inquiry Forms (separate route)
-app.use("/inquiries", require("./routes/formss"));
+/* ======================================================
+   OPTIONAL — REMOVE IF NOT NEEDED
+   Inquiries old file ("formss.js") should NOT be used anymore.
+   But if you want to keep it temporarily:
+====================================================== */
+
+
 
 /* ======================================================
-HEALTH CHECK
+   SERVER STATUS
 ====================================================== */
 app.get("/", (req, res) => {
   res.json({ ok: true, message: "NPC Backend Running 🔥" });
 });
 
 /* ======================================================
-START SERVER
+   START SERVER
 ====================================================== */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🔥 Server LIVE → PORT ${PORT}`));
+
+app.listen(PORT, () => console.log(`🔥 Server LIVE → ${PORT}`));
