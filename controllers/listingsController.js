@@ -4,72 +4,60 @@ const Listing = require("../models/Listing");
 exports.getListingsByType = async (req, res) => {
   try {
     const { type } = req.params;
-    // print the type for debugging
-    // console.log("Fetching listings of type:", type);
+
+    // 1. Log the incoming request
+    console.log(`🚀 [GET REQUEST] Fetching listings for type: ${type}`);
+
     const ALLOWED = ["franchise", "business", "investor", "blog"];
 
+    // 2. Validate type and warn if it's outside the allowed list
     if (!ALLOWED.includes(type)) {
+      console.warn(`⚠️  [INVALID TYPE ACCESS]: User attempted to fetch invalid type: "${type}"`);
       return res.status(400).json({ ok: false, error: "Invalid listing type" });
     }
 
     const data = await Listing.find({ type }).sort({ createdAt: -1 });
+
+    // 3. Log results count
+    console.log(`✅ Found ${data.length} listings for type: ${type}`);
+    
     res.json({ ok: true, data });
   } catch (err) {
-    console.error("GET Listings Error:", err);
+    // 4. Log the full stack trace for debugging
+    console.error("❌ [GET LISTINGS BY TYPE ERROR]:", err);
     res.status(500).json({ ok: false, error: "Error loading listings" });
   }
 };
-
-// exports.testEndpoint = async (req, res) => {
-//   console.log("Test endpoint hit");
-//   res.json({ ok: true, message: "Test endpoint is working!" });
-// }
 
 // 👉 GET SINGLE LISTING
 exports.getListingById = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // 1. Log the search start
+    console.log(`🚀 [GET REQUEST] Searching for listing ID: ${id}`);
+
     const item = await Listing.findById(id);
 
-    if (!item) return res.status(404).json({ ok: false, error: "Not found" });
+    // 2. Handle missing item with a warning
+    if (!item) {
+      console.warn(`⚠️  [NOT FOUND]: Listing with ID ${id} does not exist in the database.`);
+      return res.status(404).json({ ok: false, error: "Not found" });
+    }
+
+    // 3. Log successful retrieval
+    console.log(`📦 [DATA RETRIEVED]: Successfully loaded listing: "${item.title || item.name}"`);
+    
     res.json({ ok: true, data: item });
   } catch (err) {
+    // 4. Handle invalid MongoDB ObjectIDs or other server errors
+    console.error(`❌ [GET LISTING BY ID ERROR] for ID ${req.params.id}:`, err.message);
     res.status(500).json({ ok: false, error: "Error fetching listing" });
   }
 };
 
-// ✍️ CREATE LISTING
-// exports.createListing = async (req, res) => {
-//   try {
-//     // Log the incoming request
-//     // console.log(`[CREATE LISTING] User: ${req.user.email} | Type: ${req.params.type} | Time: ${new Date().toISOString()}`);
 
-//     // res.status(400).json({ ok: false, error: "Testing it now" });
-//     // return;
-
-//     const { type } = req.params;
-    
-//     // Spread req.body and add system-generated fields
-//     const listingData = {
-//       ...req.body,
-//       type,
-//       authorName: req.user.name,
-//       authorEmail: req.user.email,
-//     };
-
-//     // If Cloudinary middleware processed an image, add the URL
-//     if (req.file) {
-//       listingData.image = req.file.path; 
-//     }
-
-//     const listing = await Listing.create(listingData);
-//     res.status(201).json({ ok: true, listing });
-//   } catch (err) {
-//     console.error("Create Listing Error:", err);
-//     res.status(500).json({ ok: false, error: "Error creating listing" });
-//   }
-// };
-
+// 🆕 CREATE LISTING
 exports.createListing = async (req, res) => {
   try {
     // 1. Initial Request Log

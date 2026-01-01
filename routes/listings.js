@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const listingCtrl = require("../controllers/listingsController");
 const { protect } = require("../middleware/auth");
-const upload = require('../config/cloudinary'); // Don't forget this!
+const upload = require('../config/cloudinary'); 
 
 // Use the controller functions
 // router.get('/test', listingCtrl.testEndpoint);
