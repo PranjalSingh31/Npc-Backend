@@ -7,6 +7,6 @@ const { protect } = require('../middleware/auth');
 router.post('/create-order', protect, paymentController.createRazorpayOrder);
 
 // Razorpay webhook
-router.post('/razorpay-webhook', express.raw({ type: 'application/json' }), paymentController.razorpayWebhook);
+router.post('/razorpay-webhook', paymentController.razorpayWebhook);
 
 module.exports = router;

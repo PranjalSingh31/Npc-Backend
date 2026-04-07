@@ -4,32 +4,8 @@ const express = require("express");
 const router = express.Router();
 const upload = require('../config/cloudinary');
 const FormSubmission = require("../models/FormSubmission");
-
-// ----------------------------
-// CREATE FORM SUBMISSION
-// ----------------------------
-// router.post("/", async (req, res) => {
-//   try {
-//     const { formType, name, email, phone, payload } = req.body;
-
-//     if (!formType || !payload) {
-//       return res.status(400).json({ ok: false, error: "formType & payload required" });
-//     }
-
-//     const form = await FormSubmission.create({
-//       formType,
-//       name,
-//       email,
-//       phone,
-//       payload,
-//     });
-
-//     res.json({ ok: true, data: form });
-//   } catch (err) {
-//     console.error("Form create error:", err);
-//     res.status(500).json({ ok: false, error: "Server error" });
-//   }
-// });
+const { protect } = require("../middleware/auth");
+const { isAdmin } = require("../middleware/admin");
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
@@ -72,7 +48,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 // ----------------------------
 // GET ALL FORMS
 // ----------------------------
-router.get("/", async (req, res) => {
+router.get("/", protect, isAdmin, async (req, res) => {
   try {
     const forms = await FormSubmission.find().sort({ createdAt: -1 });
     res.json({ ok: true, data: forms });
@@ -85,7 +61,7 @@ router.get("/", async (req, res) => {
 // ----------------------------
 // GET SINGLE FORM BY ID
 // ----------------------------
-router.get("/:id", async (req, res) => {
+router.get("/:id", protect, isAdmin, async (req, res) => {
   try {
     const form = await FormSubmission.findById(req.params.id);
     if (!form) return res.status(404).json({ ok: false, error: "Form not found" });
@@ -100,7 +76,7 @@ router.get("/:id", async (req, res) => {
 // ----------------------------
 // DELETE FORM
 // ----------------------------
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", protect, isAdmin, async (req, res) => {
   try {
     const result = await FormSubmission.findByIdAndDelete(req.params.id);
 

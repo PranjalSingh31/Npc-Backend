@@ -1,5 +1,7 @@
 const Listing = require("../models/Listing");
 
+const ALLOWED = ["franchise", "business", "investor", "blog"];
+
 // 👉 GET ALL BY TYPE
 exports.getListingsByType = async (req, res) => {
   try {
@@ -7,8 +9,6 @@ exports.getListingsByType = async (req, res) => {
 
     // 1. Log the incoming request
     console.log(`🚀 [GET REQUEST] Fetching listings for type: ${type}`);
-
-    const ALLOWED = ["franchise", "business", "investor", "blog"];
 
     // 2. Validate type and warn if it's outside the allowed list
     if (!ALLOWED.includes(type)) {
@@ -32,10 +32,14 @@ exports.getListingsByType = async (req, res) => {
 // 👉 GET SINGLE LISTING
 exports.getListingById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id, type } = req.params;
     
     // 1. Log the search start
     console.log(`🚀 [GET REQUEST] Searching for listing ID: ${id}`);
+
+    if (!ALLOWED.includes(type)) {
+      return res.status(400).json({ ok: false, error: "Invalid listing type" });
+    }
 
     const item = await Listing.findById(id);
 
@@ -43,6 +47,10 @@ exports.getListingById = async (req, res) => {
     if (!item) {
       console.warn(`⚠️  [NOT FOUND]: Listing with ID ${id} does not exist in the database.`);
       return res.status(404).json({ ok: false, error: "Not found" });
+    }
+
+    if (item.type !== type) {
+      return res.status(400).json({ ok: false, error: "Type mismatch" });
     }
 
     // 3. Log successful retrieval
@@ -126,6 +134,7 @@ exports.deleteListing = async (req, res) => {
 
     if (!isAuthor && !isAdmin) {
       return res.status(403).json({ ok: false, error: "Not authorized to delete this" });
+
     }
 
     await item.deleteOne();

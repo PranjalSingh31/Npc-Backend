@@ -36,7 +36,14 @@ app.options("*", cors());
 /* ======================================================
    JSON PARSER
 ====================================================== */
-app.use(express.json({ limit: "10mb" }));
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(bodyParser.urlencoded({ extended: true }));
 
 /* ======================================================
@@ -49,8 +56,13 @@ connectDB();
 ====================================================== */
 const User = require("./models/User");
 async function createAdmin() {
-  const adminEmail = "Nitish@npcglobal.com";
-  const password = "NPC@2025##";
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !password) {
+    console.log("ℹ️ Admin bootstrap skipped (set ADMIN_EMAIL and ADMIN_PASSWORD to enable).");
+    return;
+  }
 
   let admin = await User.findOne({ email: adminEmail });
 
@@ -66,7 +78,9 @@ async function createAdmin() {
     console.log("✔ Admin Exists:", adminEmail);
   }
 }
-createAdmin();
+if (process.env.AUTO_CREATE_ADMIN === "true") {
+  createAdmin();
+}
 
 /* ======================================================
    STATIC FILES
@@ -80,7 +94,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // AUTH
 app.use("/auth", require("./routes/auth"));
-app.use("/auth/google", require("./routes/googleAuth"));
 
 // MAIN APP ROUTES
 app.use("/api/blog", require("./routes/blog"));
